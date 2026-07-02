@@ -1,9 +1,9 @@
-const CACHE_NAME = 'pdf-secure-v2';
+const CACHE_NAME = 'pdf-secure-v3';
 const ASSETS = [
+    '/',
     'index.html',
     'app.js',
-    'manifest.json',
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js'
+    'manifest.json'
 ];
 
 self.addEventListener('install', e => {
