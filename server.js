@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { PDFDocument } = require('pdf-lib');
+const { encryptPDF } = require('@pdfsmaller/pdf-encrypt');
 const cors = require('cors');
 
 const app = express();
@@ -9,33 +9,28 @@ app.use(cors()); // PWA ਨੂੰ API ਨਾਲ ਜੋੜਨ ਲਈ ਜ਼ਰੂ
 // ਫਾਈਲ ਅਪਲੋਡ ਲੈਣ ਲਈ multer ਦੀ ਵਰਤੋਂ
 const upload = multer({ storage: multer.memoryStorage() });
 
-// API Endpoint (ਇੱਥੇ ਮੋਬਾਈਲ ਤੋਂ ਡੇਟਾ ਆਵੇਗਾ)
+// API Endpoint
 app.post('/api/secure-pdf', upload.single('pdfFile'), async (req, res) => {
     try {
+        if (!req.file) {
+            return res.status(400).json({ error: "ਕੋਈ ਫਾਈਲ ਨਹੀਂ ਮਿਲੀ" });
+        }
+
         const userPassword = req.body.userPassword;
         const ownerPassword = req.body.ownerPassword;
         
-        // 1. ਮੋਬਾਈਲ ਤੋਂ ਆਈ PDF ਫਾਈਲ ਨੂੰ ਲੋਡ ਕਰੋ
-        const pdfDoc = await PDFDocument.load(req.file.buffer, { ignoreEncryption: true });
-
-        // 2. ਸਰਵਰ 'ਤੇ ਸੁਰੱਖਿਅਤ ਢੰਗ ਨਾਲ ਪਾਸਵਰਡ ਲਗਾਓ
-        await pdfDoc.encrypt({
-            userPassword: userPassword,
+        // 1. ਮੋਬਾਈਲ ਤੋਂ ਆਈ PDF ਫਾਈਲ 'ਤੇ ਪਾਸਵਰਡ ਲਗਾਓ
+        const encryptedBytes = await encryptPDF(req.file.buffer, userPassword, {
             ownerPassword: ownerPassword,
-            permissions: {
-                printing: 'notAllowed',
-                modifying: 'notAllowed',
-                copying: 'notAllowed'
-            }
+            allowPrinting: false,
+            allowModifying: false,
+            allowCopying: false
         });
 
-        // 3. ਲਾਕ ਹੋਈ PDF ਦੇ ਬਾਈਟਸ ਤਿਆਰ ਕਰੋ
-        const securedPdfBytes = await pdfDoc.save();
-
-        // 4. ਲਾਕ ਫਾਈਲ ਵਾਪਸ ਮੋਬਾਈਲ ਨੂੰ ਭੇਜੋ
+        // 2. ਲਾਕ ਫਾਈਲ ਵਾਪਸ ਮੋਬਾਈਲ ਨੂੰ ਭੇਜੋ
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename="locked_file.pdf"');
-        res.send(Buffer.from(securedPdfBytes));
+        res.send(Buffer.from(encryptedBytes));
 
     } catch (error) {
         console.error(error);
