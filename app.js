@@ -13,16 +13,14 @@ async function securePDF() {
     statusDiv.style.color = "blue";
     statusDiv.innerText = "API ਰਾਹੀਂ ਫਾਈਲ ਸੁਰੱਖਿਅਤ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ, ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ...";
 
-    // 1. ਡੇਟਾ ਦਾ ਪੈਕੇਟ (FormData) ਤਿਆਰ ਕਰਨਾ
     const formData = new FormData();
     formData.append('pdfFile', fileInput.files[0]);
     formData.append('userPassword', userPassword);
     formData.append('ownerPassword', ownerPassword);
 
     try {
-        // 2. ਆਪਣੀ API ਨੂੰ ਰਿਕਵੈਸਟ ਭੇਜੋ 
-        // (ਨੋਟ: ਲਾਈਵ ਹੋਣ 'ਤੇ http://localhost:3000 ਦੀ ਜਗ੍ਹਾ Vercel/Firebase ਦਾ ਲਿੰਕ ਆਵੇਗਾ)
-        const response = await fetch('http://localhost:3000/api/secure-pdf', {
+        // ਰਿਲੇਟਿਵ URL (ਲਾਈਵ ਅਤੇ ਲੋਕਲਹੋਸਟ ਦੋਵਾਂ 'ਤੇ ਕੰਮ ਕਰੇਗਾ)
+        const response = await fetch('/api/secure-pdf', {
             method: 'POST',
             body: formData
         });
@@ -31,10 +29,8 @@ async function securePDF() {
             throw new Error("API ਨੇ ਗਲਤੀ ਦਿੱਤੀ ਹੈ");
         }
 
-        // 3. API ਤੋਂ ਵਾਪਸ ਆਈ ਲਾਕ PDF ਨੂੰ ਪ੍ਰਾਪਤ ਕਰਨਾ
         const blob = await response.blob();
         
-        // 4. ਮੋਬਾਈਲ ਵਿੱਚ ਆਟੋਮੈਟਿਕ ਡਾਊਨਲੋਡ ਕਰਵਾਉਣਾ
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
