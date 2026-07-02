@@ -1,9 +1,3 @@
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-    });
-}
-
 async function securePDF() {
     const fileInput = document.getElementById('pdfFile');
     const userPassword = document.getElementById('userPassword').value;
@@ -17,52 +11,46 @@ async function securePDF() {
     }
 
     statusDiv.style.color = "blue";
-    statusDiv.innerText = "PDF ਦੀ ਬਣਤਰ ਚੈੱਕ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...";
+    statusDiv.innerText = "API ਰਾਹੀਂ ਫਾਈਲ ਸੁਰੱਖਿਅਤ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ, ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ...";
 
-    const file = fileInput.files[0];
-    const fileReader = new FileReader();
+    // 1. ਡੇਟਾ ਦਾ ਪੈਕੇਟ (FormData) ਤਿਆਰ ਕਰਨਾ
+    const formData = new FormData();
+    formData.append('pdfFile', fileInput.files[0]);
+    formData.append('userPassword', userPassword);
+    formData.append('ownerPassword', ownerPassword);
 
-    fileReader.onload = async function () {
-        try {
-            const pdfBytes = new Uint8Array(this.result);
-            
-            // ਫਾਈਲ ਨੂੰ ਸੁਰੱਖਿਅਤ ਮੋਡ ਵਿੱਚ ਲੋਡ ਕਰਨਾ
-            const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+    try {
+        // 2. ਆਪਣੀ API ਨੂੰ ਰਿਕਵੈਸਟ ਭੇਜੋ 
+        // (ਨੋਟ: ਲਾਈਵ ਹੋਣ 'ਤੇ http://localhost:3000 ਦੀ ਜਗ੍ਹਾ Vercel/Firebase ਦਾ ਲਿੰਕ ਆਵੇਗਾ)
+        const response = await fetch('http://localhost:3000/api/secure-pdf', {
+            method: 'POST',
+            body: formData
+        });
 
-            statusDiv.innerText = "ਪਾਸਵਰਡ ਅਤੇ ਪਰਮਿਸ਼ਨਾਂ ਲਾਗੂ ਹੋ ਰਹੀਆਂ ਹਨ...";
-
-            // ਬ੍ਰਾਊਜ਼ਰ ਕੰਪੈਟੇਬਿਲਟੀ ਮੁਤਾਬਕ ਏਨਕ੍ਰਿਪਸ਼ਨ ਸੈਟਿੰਗਜ਼
-            await pdfDoc.encrypt({
-                userPassword: userPassword,
-                ownerPassword: ownerPassword,
-                permissions: {
-                    printing: 'notAllowed',
-                    modifying: 'notAllowed',
-                    copying: 'notAllowed',
-                    annotating: 'notAllowed'
-                }
-            });
-
-            const securedPdfBytes = await pdfDoc.save();
-
-            // ਡਾਊਨਲੋਡ ਪ੍ਰਕਿਰਿਆ
-            const blob = new Blob([securedPdfBytes], { type: "application/pdf" });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = "secured_" + file.name;
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            statusDiv.style.color = "green";
-            statusDiv.innerText = "ਸਫ਼ਲਤਾ! PDF ਲਾਕ ਹੋ ਕੇ ਡਾਊਨਲੋਡ ਹੋ ਚੁੱਕੀ ਹੈ।";
-        } catch (error) {
-            statusDiv.style.color = "red";
-            statusDiv.innerText = "ਗਲਤੀ: ਇਸ PDF ਦਾ ਅੰਦਰੂਨੀ ਢਾਂਚਾ (Structure) ਸਿੱਧਾ ਲਾਕਿੰਗ ਸਪੋਰਟ ਨਹੀਂ ਕਰਦਾ।\nਕਿਰਪਾ ਕਰਕੇ ਕੋਈ ਹੋਰ PDF ਟੈਸਟ ਕਰੋ।";
-            console.error(error);
+        if (!response.ok) {
+            throw new Error("API ਨੇ ਗਲਤੀ ਦਿੱਤੀ ਹੈ");
         }
-    };
 
-    fileReader.readAsArrayBuffer(file);
+        // 3. API ਤੋਂ ਵਾਪਸ ਆਈ ਲਾਕ PDF ਨੂੰ ਪ੍ਰਾਪਤ ਕਰਨਾ
+        const blob = await response.blob();
+        
+        // 4. ਮੋਬਾਈਲ ਵਿੱਚ ਆਟੋਮੈਟਿਕ ਡਾਊਨਲੋਡ ਕਰਵਾਉਣਾ
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = "Secured_" + fileInput.files[0].name;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        statusDiv.style.color = "green";
+        statusDiv.innerText = "ਸਫ਼ਲਤਾ! PDF ਲਾਕ ਹੋ ਕੇ ਡਾਊਨਲੋਡ ਹੋ ਗਈ ਹੈ।";
+
+    } catch (error) {
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "ਗਲਤੀ: API ਨਾਲ ਸੰਪਰਕ ਨਹੀਂ ਹੋ ਸਕਿਆ ਜਾਂ ਫਾਈਲ ਸਪੋਰਟਡ ਨਹੀਂ ਹੈ।";
+        console.error(error);
+    }
 }
