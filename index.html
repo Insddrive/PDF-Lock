@@ -68,7 +68,6 @@
             white-space: pre-line;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body>
 
@@ -95,5 +94,15 @@
 </div>
 
 <script src="app.js"></script>
+<script>
+    // Service Worker ਰਜਿਸਟਰ ਕਰਨ ਲਈ ਕੋਡ
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker ਸਫ਼ਲਤਾਪੂਰਵਕ ਰਜਿਸਟਰ ਹੋ ਗਿਆ ਹੈ'))
+          .catch(err => console.log('Service Worker ਰਜਿਸਟਰੇਸ਼ਨ ਫੇਲ੍ਹ ਹੋਈ:', err));
+      });
+    }
+</script>
 </body>
 </html>
